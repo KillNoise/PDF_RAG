@@ -79,17 +79,31 @@ with st.sidebar:
         st.session_state.history_selector = "-- Seleccionar chat --"
     
     if st.button("➕ Nuevo Chat", key="new_chat", help="Iniciar un nuevo chat"):
-        keys_to_clear = [key for key in st.session_state.keys() 
-                        if not key.startswith("file_uploader_")]
-        for key in keys_to_clear:
-            del st.session_state[key]
+        # Only clear specific session state variables, excluding the API key widget
+        keys_to_clear = [
+            'messages',
+            'chat_session',
+            'document_processed',
+            'history_selector',
+            'initial_pdf_names',
+            'chat_history_file',
+            'gemini_files',
+            'previous_selection'
+        ]
         
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+        
+        # Increment file uploader key
+        st.session_state.file_uploader_key += 1
+        
+        # Initialize new chat state
         st.session_state.messages = []
         st.session_state.chat_session = None
         st.session_state.document_processed = False
         st.session_state.history_selector = "-- Seleccionar chat --"
-        st.session_state.initial_pdf_names = []
-        st.session_state.file_uploader_key += 1
+        
         st.rerun()
     
     # Chat history selection
@@ -130,10 +144,6 @@ with st.sidebar:
 
 # Process uploaded files
 if uploaded_files and not st.session_state.document_processed:
-    if "chat_history_file" in st.session_state:
-        st.error("Por favor inicia un nuevo chat antes de subir nuevos documentos")
-        st.stop()
-    
     if len(uploaded_files) > 3:
         st.error("Por favor sube un máximo de 3 PDFs.")
         st.stop()
@@ -152,7 +162,6 @@ if uploaded_files and not st.session_state.document_processed:
         
         wait_for_files_active(gemini_files)
         
-        # Store the file objects for future queries instead of using a hardcoded message.
         st.session_state.gemini_files = gemini_files
         st.session_state.chat_session = model.start_chat(history=[{"role": "user", "parts": gemini_files}])
         st.session_state.document_processed = True
